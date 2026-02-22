@@ -1,0 +1,248 @@
+/* SageReadBookSetup.css */
+:root {
+  --primary-color: #2c3e50;
+  --secondary-color: #f8f9fa;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --accent-color: #27ae60;
+  --border-color: #e0e0e0;
+  --disabled-color: #cccccc;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 
+'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  background-color: var(--secondary-color);
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.sage-read-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+/* Header Styles */
+.sage-read-header {
+  width: 100%;
+  max-width: 800px;
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.header-content {
+  padding: 30px 0;
+}
+
+.app-icon {
+  font-size: 3rem;
+  margin-bottom: 20px;
+  opacity: 0.8;
+}
+
+.app-name {
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 3.5rem;
+  color: var(--primary-color);
+  margin-bottom: 10px;
+  letter-spacing: -0.5px;
+}
+
+.app-tagline {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  font-weight: 300;
+}
+
+/* Main Content Styles */
+.sage-read-main {
+  flex: 1;
+  width: 100%;
+  max-width: 800px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.setup-card {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border-color);
+  animation: fadeIn 0.5s ease-out;
+}
+
+.main-prompt {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.main-prompt h2 {
+  font-size: 2.2rem;
+  font-weight: 400;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+/* Input Form Styles */
+.book-input-form {
+  margin-bottom: 50px;
+}
+
+.input-container {
+  margin-bottom: 25px;
+}
+
+.book-input {
+  width: 100%;
+  padding: 18px 24px;
+  font-size: 1.2rem;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  background-color: white;
+  color: var(--text-primary);
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.book-input:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+}
+
+.book-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+/* Button Styles */
+.start-analysis-btn {
+  width: 100%;
+  padding: 18px;
+  font-size: 1.2rem;
+  font-weight: 600;
+  background-color: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.start-analysis-btn:not(:disabled):hover {
+  background-color: #219653;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(39, 174, 96, 0.2);
+}
+
+.start-analysis-btn:disabled {
+  background-color: var(--disabled-color);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Guidance Section */
+.guidance-section {
+  border-top: 1px solid var(--border-color);
+  padding-top: 30px;
+}
+
+.examples h3 {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 15px;
+}
+
+.example-list {
+  list-style-type: none;
+  margin-bottom: 25px;
+}
+
+.example-list li {
+  padding: 8px 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  position: relative;
+  padding-left: 20px;
+}
+
+.example-list li:before {
+  content: "•";
+  color: var(--accent-color);
+  font-size: 1.5rem;
+  position: absolute;
+  left: 0;
+  top: 5px;
+}
+
+.help-text {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+.help-text .note {
+  font-size: 1rem;
+  font-style: italic;
+  margin-top: 10px;
+  opacity: 0.8;
+}
+
+/* Footer Styles */
+.sage-read-footer {
+  width: 100%;
+  max-width: 800px;
+  text-align: center;
+  padding: 20px 0;
+  margin-top: 40px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .app-name { font-size: 2.8rem; }
+  .setup-card { padding: 30px 25px; }
+  .main-prompt h2 { font-size: 1.8rem; }
+}
+
+@media (max-width: 480px) {
+  .app-name { font-size: 2.2rem; }
+  .setup-card { padding: 25px 20px; }
+  .main-prompt h2 { font-size: 1.5rem; }
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Accessibility */
+.book-input:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.start-analysis-btn:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}

@@ -1,0 +1,22 @@
+# SageRead project
+
+When changing UI layout, styling, or scroll behavior in sage-read-app (especially header, main content, journey, or context/confirm section), read and follow [docs/UI-LAYOUT.md](docs/UI-LAYOUT.md) to avoid breaking the layout (e.g. shifting sections, scroll issues).
+
+Keep project documentation in sync with code: on every commit that changes behavior, setup, or API, update the relevant docs (README.md, [docs/UI-LAYOUT.md](docs/UI-LAYOUT.md), [docs/API.md](docs/API.md)) in the same commit.
+
+When working on a feature branch, always read and follow its branch plan in `docs/branches/` (e.g. [docs/branches/feat-chat.md](docs/branches/feat-chat.md)). The plan contains approved architectural decisions, data models, endpoint specs, and implementation phases. Do not deviate from the plan without explicit approval. Update the branch plan document if decisions change during implementation.
+
+---
+
+## Conventional Commits
+
+Use conventional commit messages. Format: `<type>: <description>`
+
+| Type     | Description                          |
+|----------|--------------------------------------|
+| feat     | New feature                          |
+| fix      | Bug fix                              |
+| docs     | Documentation changes (README, etc.) |
+| style    | Style or formatting changes          |
+| perf     | Performance improvements             |
+| test     | Adding or updating tests             |

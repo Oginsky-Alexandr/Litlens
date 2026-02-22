@@ -1,0 +1,25 @@
+# OS / редактор
+.DS_Store
+.idea/
+.vscode/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn.lock
+pnpm-lock.yaml
+
+# Сборки
+dist/
+build/
+
+# Секреты и большие бинарные файлы (не пушить в GitHub)
+.env
+.env.*
+*.pkg
+archive/openai_env
+archive/*.pkg
+litlens bash command
+
+# Временные офисные файлы
+~$*
