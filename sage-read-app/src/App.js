@@ -10,6 +10,8 @@ const CONTEXT_TITLES = {
   lesson: "Key Lesson",
 };
 
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
+
 function App() {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState("idle"); 
@@ -47,7 +49,7 @@ function App() {
     setResult(null);
 
     try {
-      const response = await fetch("http://localhost:4000/api/analyze", {
+      const response = await fetch(`${API_BASE}/api/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -111,7 +113,7 @@ function App() {
     setContextData(null);
 
     try {
-      const response = await fetch(`http://localhost:4000/api/context/${type}`, {
+      const response = await fetch(`${API_BASE}/api/context/${type}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -232,7 +234,7 @@ function App() {
         markMessageSaved(threadId, messageId);
       } else {
         try {
-          const titleRes = await fetch("http://localhost:4000/api/chat/title", {
+          const titleRes = await fetch(`${API_BASE}/api/chat/title`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ content: message.content, language: pinnedBook.language }),
@@ -291,7 +293,7 @@ function App() {
     }
 
     try {
-      const response = await fetch("http://localhost:4000/api/chat", {
+      const response = await fetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
