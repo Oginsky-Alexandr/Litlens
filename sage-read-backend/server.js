@@ -53,8 +53,8 @@ If you clearly recognize the book:
   - author: the author
   - meta: short context (genre · year · country)
   - language: the language the user is writing in (e.g. "Russian", "English", "French"). Detect this from the user's input text, not from the book's origin.
-  - welcomeText: a warm, inviting message (1â€“2 sentences max) that reassures the reader they are beginning a meaningful reading journey.
-    Mention the book naturally and briefly allude to 1â€“2 central themes or qualities and its historical or cultural context in a subtle, non-academic way.
+  - welcomeText: a warm, inviting message (1–2 sentences max) that reassures the reader they are beginning a meaningful reading journey.
+    Mention the book naturally and briefly allude to 1–2 central themes or qualities and its historical or cultural context in a subtle, non-academic way.
 
 If you are not confident which book the user means:
 - Return a JSON object with:
@@ -62,17 +62,24 @@ If you are not confident which book the user means:
   - welcomeText: a gentle, reassuring message that invites the reader to continue anyway.
 
 IMPORTANT RULES:
-- Respond with valid JSON only.
-- Do not include explanations or extra text.
-- Do not wrap the JSON in markdown.
 - Return title, author, meta, and welcomeText in the same language as the user's input.
+
+OUTPUT RULES:
+- Output ONLY raw JSON.
+- Do NOT wrap JSON in backticks or markdown code blocks.
+- The entire response MUST be a single JSON object.
 `,
         },
         { role: "user", content: text },
       ],
     });
 
-    const raw = completion.choices[0].message.content;
+    let raw = completion.choices[0].message.content?.trim() || "";
+
+    const codeBlockMatch = raw.match(/^```(?:json)?\\s*([\\s\\S]*?)```$/i);
+    if (codeBlockMatch) {
+      raw = codeBlockMatch[1].trim();
+    }
 
     let parsed;
 
@@ -151,6 +158,8 @@ Write ONE paragraph (4-6 sentences) that:
 - Explains how these characters relate to the book's central themes
 - Uses a conversational, engaging tone (not academic)
 
+Keep the entire response under 200 words (or roughly 1200 characters), even in languages other than English.
+
 Do not include a title or heading. Start directly with the content.
 
 IMPORTANT: You MUST write your entire response in ${language || "English"}.
@@ -216,6 +225,8 @@ Write ONE paragraph (4-6 sentences) that:
 - Describes how these references enrich the reading experience
 - Uses a conversational, engaging tone (not academic)
 
+Keep the entire response under 200 words (or roughly 1200 characters), even in languages other than English.
+
 Do not include a title or heading. Start directly with the content.
 
 IMPORTANT: You MUST write your entire response in ${language || "English"}.
@@ -275,7 +286,7 @@ You are SageRead, a friendly and insightful reading companion.
 
 Your task is to provide key quotes from a book in a warm, accessible way.
 
-Write a concise selection (2-4 important quotes or paraphrases) with brief commentary. For each quote:
+Write a concise selection (2-4 important quotes or paraphrases) with brief commentary. Keep the entire response under 250 words (or roughly 1500 characters), even in languages other than English. For each quote:
 - Present the quote or a close paraphrase
 - Add one sentence explaining what it reveals about the book's themes or message
 - Use a conversational, engaging tone (not academic)
@@ -346,6 +357,8 @@ Write ONE paragraph (4-6 sentences) that:
 - Connects the lesson to modern life or personal reflection
 - Uses a conversational, engaging tone (not academic)
 
+Keep the entire response under 200 words (or roughly 1200 characters), even in languages other than English.
+
 Do not include a title or heading. Start directly with the content.
 
 IMPORTANT: You MUST write your entire response in ${language || "English"}.
@@ -410,6 +423,8 @@ Write ONE paragraph (4-6 sentences) that:
 - Highlights key socio-political events or movements of that era
 - Explains how these historical forces shaped the book's themes or narrative
 - Uses a conversational, engaging tone (not academic)
+
+Keep the entire response under 200 words (or roughly 1200 characters), even in languages other than English.
 
 Do not include a title or heading. Start directly with the content.
 
@@ -476,6 +491,8 @@ Write ONE paragraph (4-6 sentences) that:
 - Connects the work to modern readers and contemporary relevance
 - Uses a conversational, engaging tone (not academic)
 
+Keep the entire response under 200 words (or roughly 1200 characters), even in languages other than English.
+
 Do not include a title or heading. Start directly with the content.
 
 IMPORTANT: You MUST write your entire response in ${language || "English"}.
@@ -533,7 +550,7 @@ app.post("/api/chat", async (req, res) => {
   if (contextContent) {
     systemContent += `\n\nThe following context has been established about this book:\n${contextContent}\n\nContinue the conversation based on this context. Be conversational, insightful, and stay focused on the topic.`;
   }
-  systemContent += `\n\nIMPORTANT: Respond in ${language || "English"}.`;
+  systemContent += `\n\nIMPORTANT: Respond in ${language || "English"}.\nKeep each of your replies under 220 words (roughly 1300 characters), even in languages other than English.`;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -547,6 +564,7 @@ app.post("/api/chat", async (req, res) => {
         { role: "system", content: systemContent },
         ...messages.map(({ role, content }) => ({ role, content })),
       ],
+      max_tokens: 512,
       stream: true,
     });
 
