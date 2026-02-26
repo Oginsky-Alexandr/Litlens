@@ -20,3 +20,11 @@ Use conventional commit messages. Format: `<type>: <description>`
 | style    | Style or formatting changes          |
 | perf     | Performance improvements             |
 | test     | Adding or updating tests             |
+
+---
+
+## Cursor assistant workflow
+
+- Always propose a short **plan first** for any code changes (files to edit, what will be changed).
+- **Do not modify code** (no Write/StrReplace/ApplyPatch/etc.) until the user explicitly approves the plan.
+- After approval, implement **only** the agreed changes; if the scope needs to expand, present an updated plan and get approval again.

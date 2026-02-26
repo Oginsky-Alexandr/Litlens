@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import "./App.css";
 
 const CONTEXT_TITLES = {
@@ -17,6 +18,7 @@ function App() {
   const [status, setStatus] = useState("idle"); 
   // idle | loading | confirmed | journey
   const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
   const [pinnedBook, setPinnedBook] = useState(null);
   const [contextData, setContextData] = useState(null);
   const [contextLoading, setContextLoading] = useState(false);
@@ -47,6 +49,7 @@ function App() {
 
     setStatus("loading");
     setResult(null);
+    setError(null);
 
     try {
       const response = await fetch(`${API_BASE}/api/analyze`, {
@@ -57,22 +60,52 @@ function App() {
         body: JSON.stringify({ text: input }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
 
-      if (data.ok) {
+      if (!response.ok) {
+        const serverMessage =
+          data?.error?.message ||
+          (response.status >= 500
+            ? "Server error while analyzing the book. Please try again."
+            : "Request failed. Please check your input and try again.");
+
+        setError(serverMessage);
+        setStatus("idle");
+        return;
+      }
+
+      if (data?.ok) {
         setResult(data);
         setStatus("confirmed");
       } else {
+        setError(
+          data?.error?.message ||
+            "Could not analyze the book. Please adjust your description and try again."
+        );
         setStatus("idle");
       }
     } catch (e) {
       console.error(e);
+      setError("Network error while contacting SageRead. Please try again.");
       setStatus("idle");
+    }
+  };
+
+  const handleInputKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      startAnalysis();
     }
   };
 
   const handleInputChange = (e) => {
     setInput(e.target.value);
+    setError(null);
 
     // reset confirmation when user edits input
     if (status === "confirmed") {
@@ -448,7 +481,9 @@ function App() {
                 <p className="context-type-label">
                   {ctx.type === "chat" ? "💬 " : "● "}{ctx.title}
                 </p>
-                <p className="context-text">{ctx.content}</p>
+                <div className="context-text">
+                  <ReactMarkdown>{ctx.content}</ReactMarkdown>
+                </div>
               </div>
             ))}
             
@@ -478,6 +513,7 @@ function App() {
               <input
                 value={input}
                 onChange={handleInputChange}
+                onKeyDown={handleInputKeyDown}
                 placeholder="1984 - George Orwell"
               />
 
@@ -491,6 +527,7 @@ function App() {
           ) : null}
 
           <div className="card-content">
+            {error && <div className="error-banner">{error}</div>}
             {status === "idle" && <Guidance />}
 
             {status === "loading" && (
@@ -559,7 +596,12 @@ function Confirmation({ data, onConfirm }) {
   const { book, welcome } = data;
 
   if (!book || !book.recognized) {
-    return <p>{welcome?.text}</p>;
+    return (
+      <div className="confirmation">
+        <p className="label">BOOK NOT RECOGNIZED</p>
+        {welcome?.text && <p className="welcome">{welcome.text}</p>}
+      </div>
+    );
   }
 
   return (
@@ -613,7 +655,9 @@ function Journey({ book, onFetchContext, onConfirmContext, contextData, contextL
             </p>
           </div>
           <div className="context-scrollable" ref={scrollableRef}>
-            <p className="context-content">{contextData.content}</p>
+            <div className="context-content">
+              <ReactMarkdown>{contextData.content}</ReactMarkdown>
+            </div>
           </div>
           <div className="context-footer">
             <button className="confirm-button" onClick={onConfirmContext}>
@@ -673,7 +717,9 @@ function Chat({ thread, streamingContent, chatStreaming, onSendMessage, onSaveTo
             <p className="chat-message-role">
               {msg.role === "assistant" ? "SageRead" : "You"}
             </p>
-            <div className="chat-message-content">{msg.content}</div>
+            <div className="chat-message-content">
+              <ReactMarkdown>{msg.content}</ReactMarkdown>
+            </div>
             {msg.role === "assistant" && !msg.fromContext && (
               <div className="chat-message-actions">
                 {msg.saved ? (
@@ -696,7 +742,7 @@ function Chat({ thread, streamingContent, chatStreaming, onSendMessage, onSaveTo
           <div className="chat-message chat-message--assistant chat-message--streaming">
             <p className="chat-message-role">SageRead</p>
             <div className="chat-message-content">
-              {streamingContent}
+              <ReactMarkdown>{streamingContent}</ReactMarkdown>
               <span className="streaming-cursor" />
             </div>
           </div>

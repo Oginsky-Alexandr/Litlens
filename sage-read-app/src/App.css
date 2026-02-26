@@ -211,6 +211,12 @@ body {
   margin: 0;
 }
 
+.context-text p,
+.context-text ul,
+.context-text ol {
+  margin: 0 0 8px 0;
+}
+
 .reset-button {
   margin-top: 24px;
   padding: 8px 12px;
@@ -234,7 +240,7 @@ body {
   margin-left: 0;
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   overflow-y: auto;
   padding: 24px 0;
@@ -252,7 +258,7 @@ body {
   background: #fff;
   border-radius: 16px;
   padding: 32px;
-  align-self: center;
+  align-self: flex-start;
 }
 
 .main--journey .card {
@@ -295,6 +301,16 @@ button:disabled {
 
 .card-content {
   margin-top: 24px;
+}
+
+.error-banner {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff5f5;
+  border: 1px solid #f5c2c2;
+  color: #c0392b;
+  font-size: 14px;
 }
 
 .section-title {
@@ -460,6 +476,12 @@ button:disabled {
   margin: 0;
 }
 
+.context-content p,
+.context-content ul,
+.context-content ol {
+  margin: 0 0 10px 0;
+}
+
 .context-footer {
   flex-shrink: 0;
   padding-top: 16px;
@@ -563,7 +585,13 @@ button:disabled {
   font-size: 15px;
   line-height: 1.7;
   color: #2c3e50;
-  white-space: pre-wrap;
+  white-space: normal;
+}
+
+.chat-message-content p,
+.chat-message-content ul,
+.chat-message-content ol {
+  margin: 0 0 10px 0;
 }
 
 .chat-message--streaming .chat-message-content {
