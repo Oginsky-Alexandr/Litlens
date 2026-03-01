@@ -1,95 +1,95 @@
-# Хостинг SageRead (Render + litlense.com)
+# SageRead hosting (Render + litlense.com)
 
-Документ фиксирует текущий процесс деплоя и настройки хостинга. Используется для воспроизведения деплоя и понимания инфраструктуры.
-
----
-
-## Текущий стек хостинга
-
-| Компонент | Сервис | Домен / URL |
-|-----------|--------|-------------|
-| Фронт (React) | Render **Static Site** | https://litlense.com, https://www.litlense.com |
-| Бэкенд (Express) | Render **Web Service** | https://sage-read-api.onrender.com |
-| Домен, DNS | Reg.ru, панель **ispmanager** | litlense.com |
-
-Репозиторий: **GitHub** `Oginsky-Alexandr/Litlens`, ветка **master**. Push в master запускает автодеплой обоих сервисов.
+This document describes the current deploy and hosting setup. Use it to reproduce the deployment and understand the infrastructure.
 
 ---
 
-## Бэкенд (Web Service)
+## Current hosting stack
 
-- **Сервис в Render:** sage-read-api (тип Web Service).
-- **Репозиторий:** Oginsky-Alexandr/Litlens, ветка **master**.
+| Component | Service | Domain / URL |
+|-----------|--------|--------------|
+| Frontend (React) | Render **Static Site** | https://litlense.com, https://www.litlense.com |
+| Backend (Express) | Render **Web Service** | https://sage-read-api.onrender.com |
+| Domain, DNS | Reg.ru, **ispmanager** panel | litlense.com |
+
+Repository: **GitHub** `Oginsky-Alexandr/Litlens`, branch **master**. Pushing to master triggers auto-deploy of both services.
+
+---
+
+## Backend (Web Service)
+
+- **Render service:** sage-read-api (Web Service).
+- **Repository:** Oginsky-Alexandr/Litlens, branch **master**.
 - **Root Directory:** `sage-read-backend`
 - **Build Command:** `npm install`
 - **Start Command:** `node server.js`
-- **Instance Type:** Free (инстанс засыпает при простое, см. раздел про холодный старт).
+- **Instance Type:** Free (instance spins down when idle; see Cold start below).
 - **Environment:**
-  - `DEEPSEEK_API_KEY` — ключ API DeepSeek (задаётся в Render, не в репозитории).
+  - `DEEPSEEK_API_KEY` — DeepSeek API key (set in Render, not in the repo).
 - **URL:** https://sage-read-api.onrender.com
 
-Опционально можно привязать **api.litlense.com** через Custom Domains (CNAME в DNS). Для работы приложения это не обязательно.
+Optionally, you can add **api.litlense.com** via Custom Domains (CNAME in DNS). Not required for the app to work.
 
 ---
 
-## Фронт (Static Site)
+## Frontend (Static Site)
 
-- **Сервис в Render:** sage-read-app (тип Static Site).
-- **Репозиторий:** Oginsky-Alexandr/Litlens, ветка **master**.
+- **Render service:** sage-read-app (Static Site).
+- **Repository:** Oginsky-Alexandr/Litlens, branch **master**.
 - **Root Directory:** `sage-read-app`
 - **Build Command:** `npm install && npm run build`
 - **Publish Directory:** `build`
 - **Environment:**
-  - `REACT_APP_API_URL` — базовый URL API. Сейчас: `https://sage-read-api.onrender.com`. Если привяжешь api.litlense.com к Web Service, можно сменить на `https://api.litlense.com` и сделать Manual Deploy.
-- **Custom Domains:** litlense.com, www.litlense.com (редирект www → litlense.com).
+  - `REACT_APP_API_URL` — API base URL. Currently: `https://sage-read-api.onrender.com`. If you add api.litlense.com to the Web Service, you can set this to `https://api.litlense.com` and run Manual Deploy.
+- **Custom Domains:** litlense.com, www.litlense.com (www redirects to litlense.com).
 
 ---
 
-## Домен litlense.com
+## Domain litlense.com
 
-- **Регистратор / DNS:** Reg.ru, управление зоной в ispmanager (Управление DNS).
-- **Назначение доменов:**
+- **Registrar / DNS:** Reg.ru, zone managed in ispmanager (DNS Management).
+- **Domain assignment:**
   - **litlense.com**, **www.litlense.com** → Static Site (sage-read-app).
-  - **api.litlense.com** (опционально) → Web Service (sage-read-api).
+  - **api.litlense.com** (optional) → Web Service (sage-read-api).
 
 ---
 
-## DNS в ispmanager (Reg.ru)
+## DNS in ispmanager (Reg.ru)
 
-Записи создаются в разделе **Управление DNS** → выбор домена **litlense.com** → **DNS записи** → **Создать запись**.
+Create records under **DNS Management** → select domain **litlense.com** → **DNS records** → **Create record**.
 
-| Имя (поддомен) | Тип | Значение | Назначение |
-|----------------|-----|----------|------------|
-| www | CNAME | sage-read-app.onrender.com | www.litlense.com → фронт |
-| litlense.com. (корень) | A | 216.24.57.1 | litlense.com → фронт |
+| Name (subdomain) | Type | Value | Purpose |
+|------------------|------|-------|---------|
+| www | CNAME | sage-read-app.onrender.com | www.litlense.com → frontend |
+| litlense.com. (root) | A | 216.24.57.1 | litlense.com → frontend |
 
-Важно:
+Notes:
 
-- Для **корня** используется **A**-запись (CNAME на корень в ispmanager не подходит). IP **216.24.57.1** — из инструкции Render для Custom Domains.
-- Если для **www** уже была AAAA-запись — её нужно удалить перед созданием CNAME (одно имя — один тип записи).
-- Если для **корня** было две A-записи (старый хостинг и Render) — оставить только A → 216.24.57.1; старую A и при необходимости AAAA для корня удалить, иначе верификация в Render может не пройти.
-- В полях «Имя» / «Домен» в ispmanager следовать подсказкам (иногда с точкой в конце, для поддомена www — часто достаточно `www`).
+- For the **root** domain use an **A** record (CNAME at root is not suitable in ispmanager). IP **216.24.57.1** is from Render’s Custom Domains instructions.
+- If **www** already had an AAAA record, delete it before creating the CNAME (one name — one record type).
+- If the **root** had two A records (old host and Render), keep only A → 216.24.57.1; remove the old A and, if needed, the root AAAA so Render verification can succeed.
+- Follow ispmanager hints for “Name” / “Domain” fields (sometimes a trailing dot; for www subdomain, often just `www`).
 
-Изменения DNS вступают в силу в течение часа (Reg.ru); распространение по интернету может занять до 24 часов (Render).
+DNS changes take effect within about an hour (Reg.ru); full propagation can take up to 24 hours (per Render).
 
 ---
 
 ## SSL
 
-Сертификаты для litlense.com и www.litlense.com выпускает **Render** после успешной верификации доменов (Custom Domains → Verify). Дополнительно настраивать SSL в ispmanager не нужно.
+Render issues certificates for litlense.com and www.litlense.com after domain verification (Custom Domains → Verify). No SSL setup in ispmanager is required.
 
 ---
 
-## Ограничения Free (холодный старт)
+## Free tier limits (cold start)
 
-На тарифе **Free** Web Service (sage-read-api) **засыпает** после нескольких минут без запросов. **Первый запрос после простоя** ждёт пробуждения инстанса — задержка **до ~50 секунд и больше** (указано в Render). Дальнейшие запросы в активной сессии обрабатываются без этой задержки.
+On the **Free** plan, the Web Service (sage-read-api) **spins down** after several minutes without requests. The **first request after idle** waits for the instance to wake — delay **up to ~50 seconds or more** (as stated in Render). Subsequent requests in an active session are served without that delay.
 
-Пользователь может один раз долго ждать ответ (например, после «Start Analysis»). Для пет-проекта и ограниченной аудитории обычно приемлемо. Варианты: платный инстанс (без засыпания), информирование во фронте («подождите до минуты»), опционально — внешний keep-alive (осторожно с правилами Free tier).
+Users may experience one long wait (e.g. after “Start Analysis”). Usually acceptable for a pet project and limited audience. Options: paid instance (no spin-down), frontend message (“please wait up to a minute”), or external keep-alive (check Free tier rules).
 
 ---
 
-## Обновление деплоя
+## Updating the deployment
 
-- **Код:** push в **master** → Render автоматически пересобирает и деплоит оба сервиса.
-- **Переменные окружения:** изменение в Render → для **Static Site** нужен **Manual Deploy** (или push), чтобы `REACT_APP_API_URL` и другие переменные попали в новую сборку.
-- **Домен / DNS:** после смены записей в ispmanager верификацию в Render повторить через Custom Domains → Verify (при необходимости подождать распространения DNS).
+- **Code:** push to **master** → Render automatically rebuilds and deploys both services.
+- **Environment variables:** after changing them in Render, **Static Site** needs a **Manual Deploy** (or a push) so `REACT_APP_API_URL` and other vars are baked into the new build.
+- **Domain / DNS:** after changing records in ispmanager, re-run verification in Render via Custom Domains → Verify (allow time for DNS propagation if needed).
