@@ -57,6 +57,7 @@ Litlens/
 ├── docs/
 │   ├── UI-LAYOUT.md   # Frontend layout and scroll rules
 │   ├── API.md         # Backend API reference
+│   ├── DEPLOY.md      # Hosting (Render, litlense.com, DNS)
 │   └── branches/      # Architectural plans per feature branch
 │       └── feat-chat.md
 ├── .cursorrules       # Prefer docs/UI-LAYOUT.md when changing UI
@@ -69,5 +70,6 @@ Litlens/
 
 - **[docs/UI-LAYOUT.md](docs/UI-LAYOUT.md)** — DOM structure, layout and scroll rules for the app (header, library panel, journey, chat, confirm section). Use when changing UI/CSS.
 - **[docs/API.md](docs/API.md)** — Backend endpoints, request/response shapes, errors.
+- **[docs/DEPLOY.md](docs/DEPLOY.md)** — Hosting on Render, domain litlense.com, DNS (ispmanager), env vars, cold start.
 - **[docs/branches/](docs/branches/)** — Architectural plans for feature branches. Each branch that merges to master gets a plan document with approved decisions, data models, and endpoint specs.
   - [feat-chat.md](docs/branches/feat-chat.md) — Chat with AI streaming, per-topic threads, save-to-context with concatenation.
