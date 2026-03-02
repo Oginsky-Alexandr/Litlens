@@ -10,8 +10,8 @@ Use this document when changing the frontend layout or styling. Keep it in sync 
 body
 ├── header.app-header
 │   ├── .app-header-left (logo + "POWERED BY DEEPSEEK")
-│   └── .app-header-right (only when journey)
-│       └── .prompt-bar (6 context buttons + Chat button)
+│   └── .app-header-right
+│       └── .prompt-bar (6 context buttons + Chat button, always visible)
 └── .app-layout (flex row)
     ├── aside.library-panel (fixed width 280px)
     │   └── .pinned-book (clickable contexts → open chat) / .library-placeholder
@@ -22,7 +22,7 @@ body
                     └── [idle | loading | confirmed | Journey | Chat]
 ```
 
-- **Header**: Left block (280px) aligns with library panel width; right block holds the seven buttons (6 context + Chat) and fills remaining width. Has `flex-shrink: 0` so layout below has stable height.
+- **Header**: Left block (280px) aligns with library panel width; right block holds the seven buttons (6 context + Chat) and fills remaining width. Has `flex-shrink: 0` so layout below has stable height. The prompt bar is always visible to outline the workspace structure; buttons become interactive only in journey mode.
 - **Body**: `display: flex; flex-direction: column; height: 100vh` so that `#root` and then `.app-layout` can take the remaining space.
 - **#root**: Must have `flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden`. Without this, the root div grows with content and the height constraint never reaches the library panel, so no scrollbar and the Reset button becomes unreachable after more content is added.
 - **Library panel**: Always 280px (`flex: 0 0 280px`), **`min-height: 0`** (required so the flex item can shrink and overflow), `overflow-y: auto`; shows pinned book and accumulated contexts including the "Reset session" button. Without `min-height: 0` the panel does not get a scrollbar and the button can be unreachable.
@@ -81,7 +81,7 @@ Do not remove `main--journey` or re-center the main content in journey mode; it 
 | Class | Purpose |
 |-------|---------|
 | `app-header`, `app-header-left`, `app-header-right` | Header; left 280px, right flex. |
-| `prompt-bar`, `prompt-button`, `prompt-button--active` | 7 buttons in header (journey only); active state for Chat. |
+| `prompt-bar`, `prompt-button`, `prompt-button--active` | 7 buttons in header (always visible); active state for Chat. Context buttons and Chat are only interactive in journey mode. |
 | `library-panel`, `pinned-book`, `pinned-context` | Left sidebar; contexts are clickable (open chat). |
 | `main`, `main--journey` | Main scroll area; journey = top-aligned. |
 | `card`, `card-content` | White card; content area. |
