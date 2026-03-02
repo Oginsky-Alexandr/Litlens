@@ -392,73 +392,74 @@ function App() {
           <span className="powered-by">POWERED BY DEEPSEEK</span>
         </div>
 
-        {status === "journey" && pinnedBook && (
-          <div className="app-header-right">
-            <div className="prompt-bar">
-              <button 
-                className="prompt-button" 
-                onClick={() => handleFetchContext("historical")}
-                disabled={contextLoading}
-              >
-                <div className="prompt-icon">🕐</div>
-                <span>Historical Context</span>
-              </button>
+        <div className="app-header-right">
+          <div className="prompt-bar">
+            <button
+              className="prompt-button"
+              onClick={() => handleFetchContext("historical")}
+              disabled={status !== "journey" || !pinnedBook || contextLoading}
+            >
+              <div className="prompt-icon">🕐</div>
+              <span>Historical Context</span>
+            </button>
 
-              <button 
-                className="prompt-button" 
-                onClick={() => handleFetchContext("cultural")}
-                disabled={contextLoading}
-              >
-                <div className="prompt-icon">🛡️</div>
-                <span>Cultural Context</span>
-              </button>
+            <button
+              className="prompt-button"
+              onClick={() => handleFetchContext("cultural")}
+              disabled={status !== "journey" || !pinnedBook || contextLoading}
+            >
+              <div className="prompt-icon">🛡️</div>
+              <span>Cultural Context</span>
+            </button>
 
-              <button 
-                className="prompt-button" 
-                onClick={() => handleFetchContext("characters")}
-                disabled={contextLoading}
-              >
-                <div className="prompt-icon">👥</div>
-                <span>Main Characters</span>
-              </button>
+            <button
+              className="prompt-button"
+              onClick={() => handleFetchContext("characters")}
+              disabled={status !== "journey" || !pinnedBook || contextLoading}
+            >
+              <div className="prompt-icon">👥</div>
+              <span>Main Characters</span>
+            </button>
 
-              <button 
-                className="prompt-button" 
-                onClick={() => handleFetchContext("references")}
-                disabled={contextLoading}
-              >
-                <div className="prompt-icon">🔗</div>
-                <span>References</span>
-              </button>
+            <button
+              className="prompt-button"
+              onClick={() => handleFetchContext("references")}
+              disabled={status !== "journey" || !pinnedBook || contextLoading}
+            >
+              <div className="prompt-icon">🔗</div>
+              <span>References</span>
+            </button>
 
-              <button 
-                className="prompt-button" 
-                onClick={() => handleFetchContext("quotes")}
-                disabled={contextLoading}
-              >
-                <div className="prompt-icon">💬</div>
-                <span>Key Quotes</span>
-              </button>
+            <button
+              className="prompt-button"
+              onClick={() => handleFetchContext("quotes")}
+              disabled={status !== "journey" || !pinnedBook || contextLoading}
+            >
+              <div className="prompt-icon">💬</div>
+              <span>Key Quotes</span>
+            </button>
 
-              <button 
-                className="prompt-button" 
-                onClick={() => handleFetchContext("lesson")}
-                disabled={contextLoading}
-              >
-                <div className="prompt-icon">💡</div>
-                <span>Key Lesson</span>
-              </button>
+            <button
+              className="prompt-button"
+              onClick={() => handleFetchContext("lesson")}
+              disabled={status !== "journey" || !pinnedBook || contextLoading}
+            >
+              <div className="prompt-icon">💡</div>
+              <span>Key Lesson</span>
+            </button>
 
-              <button 
-                className={`prompt-button ${activeChatThreadId === "general" ? "prompt-button--active" : ""}`}
-                onClick={openGeneralChat}
-              >
-                <div className="prompt-icon">💭</div>
-                <span>Chat</span>
-              </button>
-            </div>
+            <button
+              className={`prompt-button ${
+                activeChatThreadId === "general" ? "prompt-button--active" : ""
+              }`}
+              onClick={openGeneralChat}
+              disabled={status !== "journey" || !pinnedBook}
+            >
+              <div className="prompt-icon">💭</div>
+              <span>Chat</span>
+            </button>
           </div>
-        )}
+        </div>
       </header>
 
       <div className="app-layout">

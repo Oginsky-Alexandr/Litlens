@@ -79,6 +79,11 @@ flowchart TB
 
 ---
 
+## 3.1. Initial workspace affordances
+
+- On the very first screen (before book recognition), the header already shows the 6 context types and Chat as disabled controls.
+- This makes the workspace structure (sections + chat channel) visible from the start, even though context generation and chat become available only after the book is recognized and the journey begins.
+
 ## 4. Desktop vs mobile (same ideology)
 
 ```mermaid
