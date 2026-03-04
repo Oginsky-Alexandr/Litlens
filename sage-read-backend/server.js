@@ -601,8 +601,9 @@ app.post("/api/chat/title", async (req, res) => {
       messages: [
         {
           role: "system",
-          content: `Generate a concise title (3-5 words) for the following text.
-The title should capture the main topic discussed.
+          content: `Generate a very short, topic-focused title (1-3 words) for the following text.
+Focus on the specific idea, group or motif described in the text (for example: a group of characters, a conflict, a symbol), not the book as a whole.
+Avoid using the main book title unless the text is explicitly about the book itself.
 Return ONLY the title text, no quotes, no explanation.
 IMPORTANT: Write the title in ${language || "English"}.`,
         },

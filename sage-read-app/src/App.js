@@ -13,6 +13,15 @@ const CONTEXT_TITLES = {
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
+function clampTitleWords(title, maxWords = 3) {
+  if (!title || typeof title !== "string") return "";
+  const words = title.trim().split(/\s+/);
+  if (words.length <= maxWords) {
+    return words.join(" ");
+  }
+  return words.slice(0, maxWords).join(" ");
+}
+
 function App() {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState("idle"); 
@@ -43,6 +52,13 @@ function App() {
       if (raf2 != null) cancelAnimationFrame(raf2);
     };
   }, [contextData]);
+
+  useEffect(() => {
+    const bookTitle =
+      pinnedBook?.title ||
+      (result?.book?.recognized && result?.book?.title ? result.book.title : null);
+    document.title = bookTitle ? `${bookTitle} — LitLense` : "LitLense";
+  }, [pinnedBook?.title, result?.book?.recognized, result?.book?.title]);
 
   const startAnalysis = async () => {
     if (!input || status === "loading") return;
@@ -91,7 +107,7 @@ function App() {
       }
     } catch (e) {
       console.error(e);
-      setError("Network error while contacting SageRead. Please try again.");
+      setError("Network error while contacting LitLense. Please try again.");
       setStatus("idle");
     }
   };
@@ -171,22 +187,49 @@ function App() {
     }
   };
 
-  const confirmContext = () => {
-    if (contextData && pinnedBook) {
-      const id = `ctx-${nextCtxId.current++}`;
-      setPinnedBook({
-        ...pinnedBook,
-        contexts: [
-          ...pinnedBook.contexts,
-          {
-            id,
-            type: contextData.type,
-            title: CONTEXT_TITLES[contextData.type] || contextData.type,
-            content: contextData.content,
-          },
-        ],
+  const confirmContext = async () => {
+    if (!contextData || !pinnedBook) return;
+
+    const id = `ctx-${nextCtxId.current++}`;
+    const language = pinnedBook.language;
+
+    const newContext = {
+      id,
+      type: contextData.type,
+      title: CONTEXT_TITLES[contextData.type] || contextData.type,
+      content: contextData.content,
+    };
+
+    setPinnedBook((prev) => ({
+      ...prev,
+      contexts: [...prev.contexts, newContext],
+    }));
+    setContextData(null);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/chat/title`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: contextData.content,
+          language,
+        }),
       });
-      setContextData(null);
+
+      const data = await response.json();
+      if (data?.ok && data.title) {
+        const shortTitle = clampTitleWords(data.title, 3);
+        if (shortTitle) {
+          setPinnedBook((prev) => ({
+            ...prev,
+            contexts: prev.contexts.map((ctx) =>
+              ctx.id === id ? { ...ctx, title: shortTitle } : ctx
+            ),
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Context title generation error:", e);
     }
   };
 
@@ -234,6 +277,49 @@ function App() {
     }));
   };
 
+  const addSectionToContext = async (contextId, text) => {
+    if (!text || !pinnedBook?.language) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/chat/title`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: text,
+          language: pinnedBook.language,
+        }),
+      });
+      const data = await res.json();
+      if (!data?.ok || !data.title) return;
+
+      const shortTitle = clampTitleWords(data.title, 3);
+      if (!shortTitle) return;
+
+      setPinnedBook((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          contexts: prev.contexts.map((ctx) => {
+            if (ctx.id !== contextId) return ctx;
+            const existingSections = Array.isArray(ctx.sections)
+              ? ctx.sections
+              : [];
+            const newSection = {
+              id: `sec-${Date.now()}-${existingSections.length + 1}`,
+              title: shortTitle,
+            };
+            return {
+              ...ctx,
+              sections: [...existingSections, newSection],
+            };
+          }),
+        };
+      });
+    } catch (e) {
+      console.error("Section title generation error:", e);
+    }
+  };
+
   const saveToContext = async (messageId) => {
     const threadId = activeChatThreadId;
     const thread = chatThreads[threadId];
@@ -252,6 +338,7 @@ function App() {
         ),
       }));
       markMessageSaved(threadId, messageId);
+      addSectionToContext(threadId, message.content);
     } else {
       const generalThread = chatThreads["general"];
       if (generalThread.boundToContextId) {
@@ -265,6 +352,7 @@ function App() {
           ),
         }));
         markMessageSaved(threadId, messageId);
+        addSectionToContext(boundId, message.content);
       } else {
         try {
           const titleRes = await fetch(`${API_BASE}/api/chat/title`, {
@@ -273,14 +361,23 @@ function App() {
             body: JSON.stringify({ content: message.content, language: pinnedBook.language }),
           });
           const titleData = await titleRes.json();
-          const title = titleData.ok ? titleData.title : "Chat Discussion";
+          const rawTitle = titleData.ok ? titleData.title : "Chat Discussion";
+          const title = clampTitleWords(rawTitle, 3) || "Chat Discussion";
 
           const newCtxId = `ctx-${nextCtxId.current++}`;
           setPinnedBook((prev) => ({
             ...prev,
             contexts: [
               ...prev.contexts,
-              { id: newCtxId, type: "chat", title, content: message.content },
+              {
+                id: newCtxId,
+                type: "chat",
+                title,
+                content: message.content,
+                sections: [
+                  { id: `sec-1-${newCtxId}`, title },
+                ],
+              },
             ],
           }));
 
@@ -388,7 +485,7 @@ function App() {
       {/* Top header */}
       <header className="app-header">
         <div className="app-header-left">
-          <strong>SageRead</strong>
+          <strong>LitLense</strong>
           <span className="powered-by">POWERED BY DEEPSEEK</span>
         </div>
 
@@ -480,11 +577,19 @@ function App() {
                 onClick={() => openChat(ctx.id)}
               >
                 <p className="context-type-label">
-                  {ctx.type === "chat" ? "💬 " : "● "}{ctx.title}
+                  {ctx.type === "chat" ? "💬 " : "● "}
+                  {(CONTEXT_TITLES[ctx.type] || ctx.type).toUpperCase()}
                 </p>
-                <div className="context-text">
-                  <ReactMarkdown>{ctx.content}</ReactMarkdown>
-                </div>
+                <p className="context-topic-title">{ctx.title}</p>
+                {Array.isArray(ctx.sections) && ctx.sections.length > 0 && (
+                  <ul className="context-sections">
+                    {ctx.sections.map((section) => (
+                      <li key={section.id} className="context-section-item">
+                        {section.title}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ))}
             
@@ -616,7 +721,7 @@ function Confirmation({ data, onConfirm }) {
       <p className="welcome">{welcome.text}</p>
 
       <button className="confirm-button" onClick={onConfirm}>
-        Confirm & Continue →
+        ← Put in Library context
       </button>
 
       <p className="hint-unlock">CLICK TO UNLOCK CONTEXTUAL INSIGHTS</p>
@@ -662,7 +767,7 @@ function Journey({ book, onFetchContext, onConfirmContext, contextData, contextL
           </div>
           <div className="context-footer">
             <button className="confirm-button" onClick={onConfirmContext}>
-              Confirm & Continue →
+              ← Put in Library context
             </button>
           </div>
         </div>
@@ -673,6 +778,7 @@ function Journey({ book, onFetchContext, onConfirmContext, contextData, contextL
   // Default state - show instruction
   return (
     <div className="journey">
+      <div className="journey-arrow" aria-hidden="true">↑</div>
       <h2 className="journey-title">Continue journey</h2>
       <p className="journey-description">
         Select an analysis type from the options above to explore "{book.title}".
@@ -716,7 +822,7 @@ function Chat({ thread, streamingContent, chatStreaming, onSendMessage, onSaveTo
         {messages.map((msg) => (
           <div key={msg.id} className={`chat-message chat-message--${msg.role}`}>
             <p className="chat-message-role">
-              {msg.role === "assistant" ? "SageRead" : "You"}
+              {msg.role === "assistant" ? "LitLense" : "You"}
             </p>
             <div className="chat-message-content">
               <ReactMarkdown>{msg.content}</ReactMarkdown>
@@ -741,7 +847,7 @@ function Chat({ thread, streamingContent, chatStreaming, onSendMessage, onSaveTo
 
         {chatStreaming && streamingContent && (
           <div className="chat-message chat-message--assistant chat-message--streaming">
-            <p className="chat-message-role">SageRead</p>
+            <p className="chat-message-role">LitLense</p>
             <div className="chat-message-content">
               <ReactMarkdown>{streamingContent}</ReactMarkdown>
               <span className="streaming-cursor" />
@@ -751,7 +857,7 @@ function Chat({ thread, streamingContent, chatStreaming, onSendMessage, onSaveTo
 
         {chatStreaming && !streamingContent && (
           <div className="chat-message chat-message--assistant">
-            <p className="chat-message-role">SageRead</p>
+            <p className="chat-message-role">LitLense</p>
             <div className="chat-message-content">
               <span className="loading">Thinking...</span>
             </div>

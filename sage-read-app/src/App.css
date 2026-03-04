@@ -38,8 +38,10 @@ body {
   width: 280px;
   padding: 0 24px;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
   flex-shrink: 0;
 }
 
@@ -51,8 +53,9 @@ body {
 }
 
 .app-header strong {
-  font-size: 18px;
+  font-size: 24px;
   color: #2c3e50;
+  line-height: 1.2;
 }
 
 .powered-by {
@@ -160,7 +163,7 @@ body {
 .library-title {
   font-size: 11px;
   letter-spacing: 0.1em;
-  color: #95a5a6;
+  color: #6c7a7d;
   font-weight: 600;
   margin: 0 0 24px 0;
 }
@@ -374,13 +377,22 @@ button:disabled {
   margin-top: 12px;
   font-size: 11px;
   letter-spacing: 0.1em;
-  color: #bdc3c7;
+  color: #7f8c8d;
   text-align: center;
 }
 
 /* Journey */
 .journey {
   text-align: center;
+}
+
+.journey-arrow {
+  font-size: 48px;
+  line-height: 1;
+  color: #95a5a6;
+  margin-bottom: 12px;
+  letter-spacing: 0;
+  font-weight: 600;
 }
 
 .journey-title {
@@ -460,6 +472,41 @@ button:disabled {
   color: #95a5a6;
   font-weight: 600;
   margin: 0 0 16px 0;
+}
+
+.context-topic-title {
+  font-size: 13px;
+  color: #2c3e50;
+  margin: 4px 0 0 0;
+  line-height: 1.4;
+}
+
+.context-sections {
+  list-style: none;
+  padding-left: 0;
+  margin: 4px 0 0 0;
+}
+
+.context-section-item {
+  font-size: 11px;
+  color: #7f8c8d;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.chat-message-content hr {
+  margin: 16px 0;
+  border: 0;
+  border-top: 1px solid #e0e0e0;
+}
+
+.context-content hr {
+  margin: 16px 0;
+  border: 0;
+  border-top: 1px solid #e0e0e0;
 }
 
 .context-scrollable {

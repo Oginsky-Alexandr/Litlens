@@ -33,7 +33,7 @@ const SageReadBookSetup = ({ onStartAnalysis }) => {
       {/* Header Section */}
       <header className="sage-read-header">
         <div className="header-content">
-          <h1 className="app-name">SageRead</h1>
+          <h1 className="app-name">LitLense</h1>
           <p className="app-tagline">Your intelligent reading 
 companion</p>
         </div>

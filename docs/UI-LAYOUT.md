@@ -1,4 +1,4 @@
-# SageRead — UI layout and conventions
+# LitLense — UI layout and conventions
 
 Use this document when changing the frontend layout or styling. Keep it in sync with [sage-read-app/src/App.js](sage-read-app/src/App.js) and [sage-read-app/src/App.css](sage-read-app/src/App.css).
 
@@ -14,7 +14,7 @@ body
 │       └── .prompt-bar (6 context buttons + Chat button, always visible)
 └── .app-layout (flex row)
     ├── aside.library-panel (fixed width 280px)
-    │   └── .pinned-book (clickable contexts → open chat) / .library-placeholder
+    │   └── .pinned-book (clickable contexts → open chat; shows compact type + topic labels, not full text) / .library-placeholder
     └── .right-container (flex: 1, column)
         └── main.main [ref: mainRef]
             └── .card
@@ -25,7 +25,7 @@ body
 - **Header**: Left block (280px) aligns with library panel width; right block holds the seven buttons (6 context + Chat) and fills remaining width. Has `flex-shrink: 0` so layout below has stable height. The prompt bar is always visible to outline the workspace structure; buttons become interactive only in journey mode.
 - **Body**: `display: flex; flex-direction: column; height: 100vh` so that `#root` and then `.app-layout` can take the remaining space.
 - **#root**: Must have `flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden`. Without this, the root div grows with content and the height constraint never reaches the library panel, so no scrollbar and the Reset button becomes unreachable after more content is added.
-- **Library panel**: Always 280px (`flex: 0 0 280px`), **`min-height: 0`** (required so the flex item can shrink and overflow), `overflow-y: auto`; shows pinned book and accumulated contexts including the "Reset session" button. Without `min-height: 0` the panel does not get a scrollbar and the button can be unreachable.
+- **Library panel**: Always 280px (`flex: 0 0 280px`), **`min-height: 0`** (required so the flex item can shrink and overflow), `overflow-y: auto`; shows pinned book and accumulated contexts including the "Reset session" button. Each context renders as a compact, clickable row with a small type label (Historical / Cultural / Characters / References / Quotes / Lesson / Chat), a short topic label (1–3 words) derived from its content, and (optionally) a mini table-of-contents — a list of short section titles (1–3 words) for each saved chunk from chat. Full text never appears in the sidebar; it is visible only in the main area (Journey / Chat). Without `min-height: 0` the panel does not get a scrollbar and the button can be unreachable.
 - **Main**: Scrollable (`overflow-y: auto`). Single child is `.card`. In journey mode, `main` gets class `main--journey`.
 
 ---
@@ -82,7 +82,7 @@ Do not remove `main--journey` or re-center the main content in journey mode; it 
 |-------|---------|
 | `app-header`, `app-header-left`, `app-header-right` | Header; left 280px, right flex. |
 | `prompt-bar`, `prompt-button`, `prompt-button--active` | 7 buttons in header (always visible); active state for Chat. Context buttons and Chat are only interactive in journey mode. |
-| `library-panel`, `pinned-book`, `pinned-context` | Left sidebar; contexts are clickable (open chat). |
+| `library-panel`, `pinned-book`, `pinned-context` | Left sidebar; contexts are clickable (open chat) and show type + short topic label. |
 | `main`, `main--journey` | Main scroll area; journey = top-aligned. |
 | `card`, `card-content` | White card; content area. |
 | `context-result`, `context-header`, `context-scrollable`, `context-footer` | Confirm section: label, scrollable text, fixed Confirm button. |
@@ -92,4 +92,4 @@ Do not remove `main--journey` or re-center the main content in journey mode; it 
 
 ---
 
-*Last updated: feat/chat — added Chat UI, per-topic threads, save-to-context with concatenation.*
+*Last updated: feat/sidebar-context-labels — compact labels in library panel using `/api/chat/title` for topic generation.*

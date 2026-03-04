@@ -162,7 +162,9 @@ Each `data:` line contains a JSON object with a `token` field. The final event i
 
 ### POST /api/chat/title
 
-Generates a short title (3-5 words) for a chat message to be saved as a pinned context.
+Generates a very short, topic‑focused title (typically 1–3 words) for a chat message or context block. The same endpoint is reused on the frontend to derive:
+- compact topic labels for system contexts in the library sidebar;
+- short section titles (mini table‑of‑contents) for each saved chunk inside a context.
 
 **Request body:**
 ```json
@@ -205,6 +207,6 @@ Generates a short title (3-5 words) for a chat message to be saved as a pinned c
 | POST   | /api/context/quotes      | Key quotes                   |
 | POST   | /api/context/lesson      | Key lesson                   |
 | POST   | /api/chat                | Chat (SSE streaming)         |
-| POST   | /api/chat/title          | Generate title for chat save |
+| POST   | /api/chat/title          | Generate title for chat save and compact sidebar labels |
 
 Implementation: [sage-read-backend/server.js](../sage-read-backend/server.js).
