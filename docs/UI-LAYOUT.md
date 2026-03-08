@@ -30,7 +30,35 @@ body
 
 ---
 
-## 2. Main content area and journey
+## 2. Mobile vs Desktop
+
+Layout is **mobile-first**: base styles for narrow viewport; desktop uses `@media (min-width: 1024px)` (and optionally `768px` for tablet).
+
+### Breakpoints
+
+- **Mobile**: default, up to ~768px.
+- **Desktop**: `min-width: 1024px` — sidebar in flow, prompt-bar in header.
+
+### Mobile layout
+
+- **Header**: Logo + burger only. Burger opens the Library drawer. No context buttons in header.
+- **Library**: Shown in a **left drawer** (overlay). Same content as desktop sidebar; drawer opens/closes via state (e.g. `drawerOpen`). Close on overlay click or Escape.
+- **Main**: Full width with horizontal padding (e.g. 16px). Card full width or `max-width: 100%`. Scroll rules (section 3) unchanged.
+- **Context buttons**: Rendered in the **input zone** — in Chat, below or above the chat input (Claude-like pill row); in Journey without chat, in a fixed bottom bar. Classes: e.g. `.prompt-bar-inline` or `.context-pill-row`. Not duplicated on desktop.
+
+### Mobile DOM (when drawer is used)
+
+- `.app-header`: `.app-header-left` (logo + burger), `.app-header-right` empty or minimal.
+- `.app-layout`: On mobile only `.right-container` is visible in flow; library is in an overlay (e.g. `.drawer-overlay` + `.library-drawer`, or the same `.library-panel` positioned fixed and toggled by class).
+- Context buttons: a dedicated block (e.g. `.context-pill-row`) only when viewport is mobile and in journey; placed in the input zone (bottom bar or next to chat input).
+
+### Desktop layout (`min-width: 1024px`)
+
+- Unchanged from section 1: header with 280px left block and prompt-bar (7 buttons), sidebar in flow (280px), main with centered card (max-width 676px).
+
+---
+
+## 3. Main content area and journey
 
 - **Default (non-journey)**: `.main` uses `align-items: center` and `justify-content: center` — card is vertically and horizontally centered.
 - **Journey mode** (`status === "journey" && pinnedBook`):
@@ -48,7 +76,7 @@ Do not remove `main--journey` or re-center the main content in journey mode; it 
 
 ---
 
-## 3. Scroll behavior
+## 4. Scroll behavior
 
 - **Scroll container**: The only scrollable area for the main content is **`main.main`** (ref `mainRef`).
 - **Reset on context change**: Whenever `contextData` changes (new context loaded or cleared after Confirm), `mainRef.current.scrollTop` must be set to `0` (in a `useEffect`). Use a double `requestAnimationFrame` so the reset runs after layout/paint.
@@ -58,7 +86,7 @@ Do not remove `main--journey` or re-center the main content in journey mode; it 
 
 ---
 
-## 4. Context result block (confirm section)
+## 5. Context result block (confirm section)
 
 - **`.context-result`** must have a **fixed height** for inner flex to work: use both `height` and `max-height` (e.g. `min(70vh, calc(100vh - 250px))`). Include **`min-height: 0`** so it can shrink in flex layouts.
 - **`.context-scrollable`** is the only scrollable part; header and footer are `flex-shrink: 0`. Do not make the whole card scroll without keeping the Confirm button in a fixed footer.
@@ -66,7 +94,7 @@ Do not remove `main--journey` or re-center the main content in journey mode; it 
 
 ---
 
-## 5. Known pitfalls (do not)
+## 6. Known pitfalls (do not)
 
 - **Do not** vertically center the main content in journey mode (`align-items: center` on `main` when `main--journey` is applied). It causes the Loading / Confirm block to shift down repeatedly.
 - **Do not** rely only on `max-height` for `.context-result` without an explicit `height` in the same value; the inner flex child (`.context-scrollable`) needs a definite parent height for scrolling to work.
@@ -76,7 +104,7 @@ Do not remove `main--journey` or re-center the main content in journey mode; it 
 
 ---
 
-## 6. Key CSS classes (quick reference)
+## 7. Key CSS classes (quick reference)
 
 | Class | Purpose |
 |-------|---------|
@@ -89,7 +117,9 @@ Do not remove `main--journey` or re-center the main content in journey mode; it 
 | `chat-container`, `chat-messages`, `chat-input-bar` | Chat view: messages list, sticky input bar. |
 | `chat-message--user`, `chat-message--assistant`, `chat-message--streaming` | Chat message variants. |
 | `chat-save-button`, `chat-saved-label` | Save to context button and saved state on AI messages. |
+| `library-drawer`, `drawer-overlay` (mobile) | Left drawer for Library on mobile; overlay behind it. |
+| `context-pill-row` / `prompt-bar-inline` (mobile) | Row of context + Chat buttons next to chat input or in bottom bar; mobile only. |
 
 ---
 
-*Last updated: feat/sidebar-context-labels — compact labels in library panel using `/api/chat/title` for topic generation.*
+*Last updated: feat/mobile-first — mobile-first layout, Library drawer, context buttons by input (branch plan in docs/branches/feat-mobile-first.md).*
