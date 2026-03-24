@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import "./App.css";
+import bookAltIcon from "./assets/book-alt.png";
 
 const CONTEXT_TITLES = {
   historical: "Historical Context",
@@ -24,19 +25,21 @@ function clampTitleWords(title, maxWords = 3) {
 
 function App() {
   const [input, setInput] = useState("");
-  const [status, setStatus] = useState("idle"); 
-  // idle | loading | confirmed | journey
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState(null);
+  const [status, setStatus] = useState("idle");
   const [pinnedBook, setPinnedBook] = useState(null);
+  const [bookRecognitionMessages, setBookRecognitionMessages] = useState([]);
+  const [bookRecognitionLoading, setBookRecognitionLoading] = useState(false);
+  const [lastRecognizedResult, setLastRecognizedResult] = useState(null);
   const [contextData, setContextData] = useState(null);
   const [contextLoading, setContextLoading] = useState(false);
   const [chatThreads, setChatThreads] = useState({});
   const [activeChatThreadId, setActiveChatThreadId] = useState(null);
   const [chatStreaming, setChatStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const mainRef = useRef(null);
   const nextCtxId = useRef(1);
+  const nextBookMsgId = useRef(1);
 
   useEffect(() => {
     const el = mainRef.current;
@@ -53,27 +56,45 @@ function App() {
     };
   }, [contextData]);
 
+  /* When opening a chat thread, scroll main to top so message history is visible (not below the fold). */
+  useEffect(() => {
+    if (!activeChatThreadId) return;
+    const el = mainRef.current;
+    if (!el) return;
+    const raf = requestAnimationFrame(() => {
+      el.scrollTop = 0;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeChatThreadId]);
+
   useEffect(() => {
     const bookTitle =
       pinnedBook?.title ||
-      (result?.book?.recognized && result?.book?.title ? result.book.title : null);
+      (lastRecognizedResult?.book?.recognized && lastRecognizedResult?.book?.title
+        ? lastRecognizedResult.book.title
+        : null);
     document.title = bookTitle ? `${bookTitle} — LitLense` : "LitLense";
-  }, [pinnedBook?.title, result?.book?.recognized, result?.book?.title]);
+  }, [pinnedBook?.title, lastRecognizedResult?.book?.recognized, lastRecognizedResult?.book?.title]);
 
-  const startAnalysis = async () => {
-    if (!input || status === "loading") return;
+  const sendBookQuery = async () => {
+    const text = input.trim();
+    if (!text || bookRecognitionLoading) return;
 
-    setStatus("loading");
-    setResult(null);
-    setError(null);
+    const userMsg = {
+      id: `bm-${nextBookMsgId.current++}`,
+      role: "user",
+      content: text,
+    };
+    setBookRecognitionMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setBookRecognitionLoading(true);
+    setLastRecognizedResult(null);
 
     try {
       const response = await fetch(`${API_BASE}/api/analyze`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ text: input }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
       });
 
       let data;
@@ -83,50 +104,50 @@ function App() {
         data = null;
       }
 
-      if (!response.ok) {
-        const serverMessage =
-          data?.error?.message ||
-          (response.status >= 500
-            ? "Server error while analyzing the book. Please try again."
-            : "Request failed. Please check your input and try again.");
+      const assistantContent =
+        !response.ok
+          ? (data?.error?.message ||
+            (response.status >= 500
+              ? "Server error while analyzing the book. Please try again."
+              : "Request failed. Please check your input and try again."))
+          : data?.ok
+            ? (data.welcome?.text || "Done.")
+            : (data?.error?.message ||
+              "Could not analyze the book. Please adjust your description and try again.");
 
-        setError(serverMessage);
-        setStatus("idle");
-        return;
-      }
+      const assistantMsg = {
+        id: `bm-${nextBookMsgId.current++}`,
+        role: "assistant",
+        content: assistantContent,
+        result: response.ok && data ? data : undefined,
+      };
 
-      if (data?.ok) {
-        setResult(data);
-        setStatus("confirmed");
+      setBookRecognitionMessages((prev) => [...prev, assistantMsg]);
+      if (response.ok && data?.book?.recognized) {
+        setLastRecognizedResult(data);
       } else {
-        setError(
-          data?.error?.message ||
-            "Could not analyze the book. Please adjust your description and try again."
-        );
-        setStatus("idle");
+        setLastRecognizedResult(null);
       }
     } catch (e) {
       console.error(e);
-      setError("Network error while contacting LitLense. Please try again.");
-      setStatus("idle");
+      setBookRecognitionMessages((prev) => [
+        ...prev,
+        {
+          id: `bm-${nextBookMsgId.current++}`,
+          role: "assistant",
+          content: "Network error while contacting LitLense. Please try again.",
+        },
+      ]);
+      setLastRecognizedResult(null);
+    } finally {
+      setBookRecognitionLoading(false);
     }
   };
 
-  const handleInputKeyDown = (e) => {
-    if (e.key === "Enter") {
+  const handleBookInputKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      startAnalysis();
-    }
-  };
-
-  const handleInputChange = (e) => {
-    setInput(e.target.value);
-    setError(null);
-
-    // reset confirmation when user edits input
-    if (status === "confirmed") {
-      setStatus("idle");
-      setResult(null);
+      sendBookQuery();
     }
   };
 
@@ -134,25 +155,30 @@ function App() {
     setPinnedBook(null);
     setInput("");
     setStatus("idle");
-    setResult(null);
+    setBookRecognitionMessages([]);
+    setBookRecognitionLoading(false);
+    setLastRecognizedResult(null);
     setChatThreads({});
     setActiveChatThreadId(null);
     setChatStreaming(false);
     setStreamingContent("");
+    setIsLibraryOpen(false);
   };
 
   const confirmAndContinue = () => {
-    if (result?.book?.recognized) {
-      setPinnedBook({
-        title: result.book.title,
-        author: result.book.author,
-        meta: result.book.meta,
-        language: result.book.language,
-        contexts: [],
-      });
-      setStatus("journey");
-      setInput("");
-    }
+    if (!lastRecognizedResult?.book?.recognized) return;
+    const { book } = lastRecognizedResult;
+    setPinnedBook({
+      title: book.title,
+      author: book.author,
+      meta: book.meta,
+      language: book.language,
+      contexts: [],
+    });
+    setStatus("journey");
+    setInput("");
+    setLastRecognizedResult(null);
+    setBookRecognitionMessages([]);
   };
 
   const fetchContext = async (type) => {
@@ -243,6 +269,7 @@ function App() {
     }
     setActiveChatThreadId(contextId);
     setContextData(null);
+    setIsLibraryOpen(false);
   };
 
   const openGeneralChat = () => {
@@ -398,17 +425,21 @@ function App() {
     }
   };
 
-  const sendChatMessage = async (text) => {
+  const sendChatMessage = async (text, threadIdOverride) => {
     if (!text.trim() || chatStreaming || !pinnedBook) return;
 
-    const threadId = activeChatThreadId;
-    const currentThread = chatThreads[threadId] || { messages: [] };
+    const threadId = threadIdOverride ?? activeChatThreadId;
+    if (!threadId) return;
+
+    if (threadIdOverride) setActiveChatThreadId(threadId);
+
     const userMsg = { id: `m-${Date.now()}`, role: "user", content: text.trim() };
+    const currentThread = chatThreads[threadId] || { boundToContextId: null, messages: [] };
     const updatedMessages = [...currentThread.messages, userMsg];
 
     setChatThreads((prev) => ({
       ...prev,
-      [threadId]: { ...prev[threadId], messages: updatedMessages },
+      [threadId]: { ...(prev[threadId] || { boundToContextId: null }), messages: updatedMessages },
     }));
 
     setChatStreaming(true);
@@ -484,13 +515,31 @@ function App() {
     <>
       {/* Top header */}
       <header className="app-header">
-        <div className="app-header-left">
+        <div className="app-header-left-zone">
+          <button
+            type="button"
+            className="library-toggle-button"
+            onClick={() => setIsLibraryOpen(true)}
+            disabled={!pinnedBook}
+            aria-label="Open library context"
+          >
+            <span
+              className="library-icon"
+              role="img"
+              aria-hidden
+              style={{
+                maskImage: `url(${bookAltIcon})`,
+                WebkitMaskImage: `url(${bookAltIcon})`,
+              }}
+            />
+          </button>
+        </div>
+        <div className="app-header-logo">
           <strong>LitLense</strong>
           <span className="powered-by">POWERED BY DEEPSEEK</span>
         </div>
-
         <div className="app-header-right">
-          <div className="prompt-bar">
+          <div className="prompt-bar prompt-bar--header">
             <button
               className="prompt-button"
               onClick={() => handleFetchContext("historical")}
@@ -562,46 +611,12 @@ function App() {
       <div className="app-layout">
         {/* Left panel - Library Context */}
         <aside className="library-panel">
-        <h3 className="library-title">LIBRARY CONTEXT</h3>
-        
-        {pinnedBook ? (
-          <div className="pinned-book">
-            <h4>{pinnedBook.title}</h4>
-            <p className="author">{pinnedBook.author}</p>
-            <p className="meta">{pinnedBook.meta}</p>
-            
-            {pinnedBook.contexts?.map((ctx) => (
-              <div
-                className={`pinned-context pinned-context--clickable ${activeChatThreadId === ctx.id ? "pinned-context--active" : ""}`}
-                key={ctx.id}
-                onClick={() => openChat(ctx.id)}
-              >
-                <p className="context-type-label">
-                  {ctx.type === "chat" ? "💬 " : "● "}
-                  {(CONTEXT_TITLES[ctx.type] || ctx.type).toUpperCase()}
-                </p>
-                <p className="context-topic-title">{ctx.title}</p>
-                {Array.isArray(ctx.sections) && ctx.sections.length > 0 && (
-                  <ul className="context-sections">
-                    {ctx.sections.map((section) => (
-                      <li key={section.id} className="context-section-item">
-                        {section.title}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
-            
-            <button className="reset-button" onClick={resetSession}>
-              × RESET SESSION
-            </button>
-          </div>
-        ) : (
-          <p className="library-placeholder">
-            Confirmed book details will appear here.
-          </p>
-        )}
+          <LibraryPanelContent
+            pinnedBook={pinnedBook}
+            activeChatThreadId={activeChatThreadId}
+            openChat={openChat}
+            resetSession={resetSession}
+          />
       </aside>
 
       {/* Right side - Main content */}
@@ -611,49 +626,39 @@ function App() {
         className={`main ${status === "journey" && pinnedBook ? "main--journey" : ""}`}
         ref={mainRef}
       >
-        <div className="card">
+        <div className={`card ${!pinnedBook ? "card--book-recognition" : ""}`}>
           {!pinnedBook ? (
-            <>
-              <h2>Which book are you reading?</h2>
-
-              <input
-                value={input}
-                onChange={handleInputChange}
-                onKeyDown={handleInputKeyDown}
-                placeholder="1984 - George Orwell"
-              />
-
-              <button
-                onClick={startAnalysis}
-                disabled={!input || status === "loading"}
-              >
-                Start Analysis
-              </button>
-            </>
-          ) : null}
-
+            <BookRecognitionThread
+              messages={bookRecognitionMessages}
+              loading={bookRecognitionLoading}
+              input={input}
+              onInputChange={setInput}
+              onSend={sendBookQuery}
+              lastRecognizedResult={lastRecognizedResult}
+              onConfirm={confirmAndContinue}
+            />
+          ) : (
           <div className="card-content">
-            {error && <div className="error-banner">{error}</div>}
-            {status === "idle" && <Guidance />}
-
-            {status === "loading" && (
-              <p className="loading">
-                Preparing your reading journey...
-              </p>
-            )}
-
-            {status === "confirmed" && result && (
-              <Confirmation data={result} onConfirm={confirmAndContinue} />
-            )}
-
             {status === "journey" && pinnedBook && !activeChatThreadId && (
-              <Journey 
-                book={pinnedBook} 
-                onFetchContext={handleFetchContext}
-                onConfirmContext={confirmContext}
-                contextData={contextData}
-                contextLoading={contextLoading}
-              />
+              <>
+                <ContextPillRow
+                  onFetchContext={handleFetchContext}
+                  openGeneralChat={openGeneralChat}
+                  contextLoading={contextLoading}
+                  activeChatThreadId={activeChatThreadId}
+                />
+                <Journey 
+                  book={pinnedBook} 
+                  onFetchContext={handleFetchContext}
+                  onConfirmContext={confirmContext}
+                  contextData={contextData}
+                  contextLoading={contextLoading}
+                />
+                <JourneyChatInput
+                  onSend={(msg) => sendChatMessage(msg, "general")}
+                  chatStreaming={chatStreaming}
+                />
+              </>
             )}
 
             {status === "journey" && pinnedBook && activeChatThreadId && (
@@ -664,13 +669,32 @@ function App() {
                 onSendMessage={sendChatMessage}
                 onSaveToContext={saveToContext}
                 onClose={closeChat}
+                contextButtonsSlot={
+                  <ContextPillRow
+                    onFetchContext={handleFetchContext}
+                    openGeneralChat={openGeneralChat}
+                    contextLoading={contextLoading}
+                    activeChatThreadId={activeChatThreadId}
+                  />
+                }
               />
             )}
           </div>
+          )}
         </div>
       </main>
       </div>
     </div>
+
+      {isLibraryOpen && (
+        <LibraryDrawer
+          pinnedBook={pinnedBook}
+          activeChatThreadId={activeChatThreadId}
+          openChat={openChat}
+          resetSession={resetSession}
+          onClose={() => setIsLibraryOpen(false)}
+        />
+      )}
     </>
   );
 }
@@ -679,52 +703,280 @@ export default App;
 
 /* ---------------- Subcomponents ---------------- */
 
-function Guidance() {
+function LibraryPanelContent({ pinnedBook, activeChatThreadId, openChat, resetSession, hideTitle }) {
   return (
     <>
-      <p className="section-title">Examples:</p>
-      <ul className="examples">
-        <li>"To Kill a Mockingbird by Harper Lee"</li>
-        <li>"1984 - George Orwell"</li>
-      </ul>
+      {!hideTitle && <h3 className="library-title">LIBRARY CONTEXT</h3>}
 
-      <p className="hint">
-        Enter the book in any format, we'll figure it out!
-        <br />
-        <strong>Tip:</strong> Including both title and author helps ensure accurate
-        analysis.
-      </p>
+      {pinnedBook ? (
+        <div className="pinned-book">
+          <h4>{pinnedBook.title}</h4>
+          <p className="author">{pinnedBook.author}</p>
+          <p className="meta">{pinnedBook.meta}</p>
+
+          {pinnedBook.contexts?.map((ctx) => (
+            <div
+              className={`pinned-context pinned-context--clickable ${
+                activeChatThreadId === ctx.id ? "pinned-context--active" : ""
+              }`}
+              key={ctx.id}
+              onClick={() => openChat(ctx.id)}
+            >
+              <p className="context-type-label">
+                {ctx.type === "chat" ? "💬 " : "● "}
+                {(CONTEXT_TITLES[ctx.type] || ctx.type).toUpperCase()}
+              </p>
+              <p className="context-topic-title">{ctx.title}</p>
+              {Array.isArray(ctx.sections) && ctx.sections.length > 0 && (
+                <ul className="context-sections">
+                  {ctx.sections.map((section) => (
+                    <li key={section.id} className="context-section-item">
+                      {section.title}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+
+          <button className="reset-button" onClick={resetSession}>
+            × RESET SESSION
+          </button>
+        </div>
+      ) : (
+        <p className="library-placeholder">
+          Confirmed book details will appear here.
+        </p>
+      )}
     </>
   );
 }
 
-function Confirmation({ data, onConfirm }) {
-  const { book, welcome } = data;
-
-  if (!book || !book.recognized) {
-    return (
-      <div className="confirmation">
-        <p className="label">BOOK NOT RECOGNIZED</p>
-        {welcome?.text && <p className="welcome">{welcome.text}</p>}
+function LibraryDrawer({
+  pinnedBook,
+  activeChatThreadId,
+  openChat,
+  resetSession,
+  onClose,
+}) {
+  return (
+    <div className="library-drawer-overlay" onClick={onClose}>
+      <div
+        className="library-drawer"
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+      >
+        <div className="library-drawer-header">
+          <span className="library-drawer-title">Library context</span>
+        </div>
+        <div className="library-drawer-body">
+          <LibraryPanelContent
+            pinnedBook={pinnedBook}
+            activeChatThreadId={activeChatThreadId}
+            openChat={openChat}
+            resetSession={resetSession}
+            hideTitle
+          />
+        </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
+
+function BookRecognitionThread({
+  messages,
+  loading,
+  input,
+  onInputChange,
+  onSend,
+  lastRecognizedResult,
+  onConfirm,
+}) {
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages.length, loading]);
 
   return (
-    <div className="confirmation">
-      <p className="label">IDENTITY VERIFIED</p>
+    <div className="chat-container">
+      <div className="chat-header">
+        <h2 className="chat-header-title">Which book are you reading?</h2>
+      </div>
 
-      <h3>{book.title}</h3>
-      <p className="author">{book.author}</p>
-      <p className="meta">{book.meta}</p>
+      <div className="chat-messages">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`chat-message chat-message--${msg.role}`}>
+            <p className="chat-message-role">
+              {msg.role === "assistant" ? "LitLense" : "You"}
+            </p>
+            <div className="chat-message-content">
+              {msg.role === "assistant" && msg.result?.book?.recognized && (
+                <p className="book-recognition-meta">
+                  <strong>{msg.result.book.title}</strong>
+                  {msg.result.book.author && ` — ${msg.result.book.author}`}
+                </p>
+              )}
+              <ReactMarkdown>{msg.content}</ReactMarkdown>
+            </div>
+          </div>
+        ))}
 
-      <p className="welcome">{welcome.text}</p>
+        {loading && (
+          <div className="chat-message chat-message--assistant">
+            <p className="chat-message-role">LitLense</p>
+            <div className="chat-message-content">
+              <span className="loading">Preparing your reading journey...</span>
+            </div>
+          </div>
+        )}
 
-      <button className="confirm-button" onClick={onConfirm}>
-        ← Put in Library context
+        <div ref={messagesEndRef} />
+      </div>
+
+      {lastRecognizedResult?.book?.recognized && (
+        <div className="book-confirm-bar">
+          <button className="confirm-button book-confirm-button" onClick={onConfirm}>
+            ← Put in Library context
+          </button>
+        </div>
+      )}
+
+      <div className="chat-input-bar">
+        <textarea
+          value={input}
+          onChange={(e) => onInputChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onSend();
+            }
+          }}
+          placeholder="1984 - George Orwell"
+          disabled={loading}
+          rows={1}
+        />
+        <button
+          className="chat-send-button"
+          onClick={onSend}
+          disabled={loading || !input.trim()}
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function JourneyChatInput({ onSend, chatStreaming }) {
+  const [value, setValue] = useState("");
+
+  const handleSend = () => {
+    if (!value.trim() || chatStreaming) return;
+    onSend(value.trim());
+    setValue("");
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="chat-input-bar journey-chat-input">
+      <textarea
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Type your message..."
+        disabled={chatStreaming}
+        rows={1}
+      />
+      <button
+        className="chat-send-button"
+        onClick={handleSend}
+        disabled={chatStreaming || !value.trim()}
+      >
+        Send
       </button>
+    </div>
+  );
+}
 
-      <p className="hint-unlock">CLICK TO UNLOCK CONTEXTUAL INSIGHTS</p>
+function ContextPillRow({
+  onFetchContext,
+  openGeneralChat,
+  contextLoading,
+  activeChatThreadId,
+}) {
+  const disabled = contextLoading;
+  return (
+    <div className="context-pill-row" role="group" aria-label="Context actions">
+      <button
+        type="button"
+        className="context-pill-button"
+        onClick={() => onFetchContext("historical")}
+        disabled={disabled}
+      >
+        <span className="context-pill-icon">🕐</span>
+        <span>Historical</span>
+      </button>
+      <button
+        type="button"
+        className="context-pill-button"
+        onClick={() => onFetchContext("cultural")}
+        disabled={disabled}
+      >
+        <span className="context-pill-icon">🛡️</span>
+        <span>Cultural</span>
+      </button>
+      <button
+        type="button"
+        className="context-pill-button"
+        onClick={() => onFetchContext("characters")}
+        disabled={disabled}
+      >
+        <span className="context-pill-icon">👥</span>
+        <span>Characters</span>
+      </button>
+      <button
+        type="button"
+        className="context-pill-button"
+        onClick={() => onFetchContext("references")}
+        disabled={disabled}
+      >
+        <span className="context-pill-icon">🔗</span>
+        <span>References</span>
+      </button>
+      <button
+        type="button"
+        className="context-pill-button"
+        onClick={() => onFetchContext("quotes")}
+        disabled={disabled}
+      >
+        <span className="context-pill-icon">💬</span>
+        <span>Quotes</span>
+      </button>
+      <button
+        type="button"
+        className="context-pill-button"
+        onClick={() => onFetchContext("lesson")}
+        disabled={disabled}
+      >
+        <span className="context-pill-icon">💡</span>
+        <span>Lesson</span>
+      </button>
+      <button
+        type="button"
+        className={`context-pill-button ${activeChatThreadId === "general" ? "context-pill-button--active" : ""}`}
+        onClick={openGeneralChat}
+      >
+        <span className="context-pill-icon">💭</span>
+        <span>Chat</span>
+      </button>
     </div>
   );
 }
@@ -781,13 +1033,15 @@ function Journey({ book, onFetchContext, onConfirmContext, contextData, contextL
       <div className="journey-arrow" aria-hidden="true">↑</div>
       <h2 className="journey-title">Continue journey</h2>
       <p className="journey-description">
-        Select an analysis type from the options above to explore "{book.title}".
+        Select an analysis type from the options above to explore "<strong>{book.title}</strong>"
+        <br />
+        OR
       </p>
     </div>
   );
 }
 
-function Chat({ thread, streamingContent, chatStreaming, onSendMessage, onSaveToContext, onClose }) {
+function Chat({ thread, streamingContent, chatStreaming, onSendMessage, onSaveToContext, onClose, contextButtonsSlot }) {
   const [inputValue, setInputValue] = useState("");
   const messagesEndRef = useRef(null);
 
@@ -817,6 +1071,8 @@ function Chat({ thread, streamingContent, chatStreaming, onSendMessage, onSaveTo
           ← Back to Journey
         </button>
       </div>
+
+      {contextButtonsSlot}
 
       <div className="chat-messages">
         {messages.map((msg) => (

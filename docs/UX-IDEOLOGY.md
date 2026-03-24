@@ -103,7 +103,7 @@ flowchart TB
   end
 
   subgraph mobile["Mobile"]
-    M1["Drawer or tab: Library"]
+    M1["Left drawer: Library"]
     M2["Screen: Sections / TOC"]
     M3["Tap section → thread in main"]
     M4["Header: icon → menu / '+'"]
@@ -121,4 +121,4 @@ flowchart TB
 
 ---
 
-*Reference: product direction (multiple books, sections, fast nav, collapsed context buttons). Mobile approach: [discussion in chat]; implementation: to be described in branch plan or UI-LAYOUT.*
+*Reference: product direction (multiple books, sections, fast nav, collapsed context buttons). Mobile approach: Library as left drawer opened by a small header icon, context buttons next to the chat input, chat bar anchored at the bottom of the screen. See [docs/branches/feat-mobile-first.md](docs/branches/feat-mobile-first.md) and [docs/UI-LAYOUT.md](UI-LAYOUT.md) for implementation details.*

@@ -6,14 +6,16 @@ Use this document when changing the frontend layout or styling. Keep it in sync 
 
 ## 1. DOM structure (high level)
 
-```
+Desktop и mobile используют одну и ту же структуру DOM, но с разными классами/медиа‑правилами.
+
+```text
 body
 ├── header.app-header
-│   ├── .app-header-left (logo + "POWERED BY DEEPSEEK")
-│   └── .app-header-right
-│       └── .prompt-bar (6 context buttons + Chat button, always visible)
+│   ├── .app-header-left-zone   (Library icon button; hidden on desktop)
+│   ├── .app-header-logo        (logo + "POWERED BY DEEPSEEK")
+│   └── .app-header-right       (prompt-bar on desktop, empty on mobile)
 └── .app-layout (flex row)
-    ├── aside.library-panel (fixed width 280px)
+    ├── aside.library-panel     (sidebar in flow only on desktop)
     │   └── .pinned-book (clickable contexts → open chat; shows compact type + topic labels, not full text) / .library-placeholder
     └── .right-container (flex: 1, column)
         └── main.main [ref: mainRef]
@@ -22,7 +24,7 @@ body
                     └── [idle | loading | confirmed | Journey | Chat]
 ```
 
-- **Header**: Left block (280px) aligns with library panel width; right block holds the seven buttons (6 context + Chat) and fills remaining width. Has `flex-shrink: 0` so layout below has stable height. The prompt bar is always visible to outline the workspace structure; buttons become interactive only in journey mode.
+- **Header**: На мобиле иконка Library расположена в `.app-header-left-zone`, логотип по центру, правая зона пустая. На десктопе левая зона скрыта, `.app-header-logo` занимает 280px слева, а `.app-header-right` содержит prompt‑bar (7 кнопок) и занимает оставшуюся ширину. Header имеет `flex-shrink: 0` чтобы ниже лэйаут был стабильным по высоте.
 - **Body**: `display: flex; flex-direction: column; height: 100vh` so that `#root` and then `.app-layout` can take the remaining space.
 - **#root**: Must have `flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden`. Without this, the root div grows with content and the height constraint never reaches the library panel, so no scrollbar and the Reset button becomes unreachable after more content is added.
 - **Library panel**: Always 280px (`flex: 0 0 280px`), **`min-height: 0`** (required so the flex item can shrink and overflow), `overflow-y: auto`; shows pinned book and accumulated contexts including the "Reset session" button. Each context renders as a compact, clickable row with a small type label (Historical / Cultural / Characters / References / Quotes / Lesson / Chat), a short topic label (1–3 words) derived from its content, and (optionally) a mini table-of-contents — a list of short section titles (1–3 words) for each saved chunk from chat. Full text never appears in the sidebar; it is visible only in the main area (Journey / Chat). Without `min-height: 0` the panel does not get a scrollbar and the button can be unreachable.
@@ -41,16 +43,16 @@ Layout is **mobile-first**: base styles for narrow viewport; desktop uses `@medi
 
 ### Mobile layout
 
-- **Header**: Logo + burger only. Burger opens the Library drawer. No context buttons in header.
-- **Library**: Shown in a **left drawer** (overlay). Same content as desktop sidebar; drawer opens/closes via state (e.g. `drawerOpen`). Close on overlay click or Escape.
-- **Main**: Full width with horizontal padding (e.g. 16px). Card full width or `max-width: 100%`. Scroll rules (section 3) unchanged.
-- **Context buttons**: Rendered in the **input zone** — in Chat, below or above the chat input (Claude-like pill row); in Journey without chat, in a fixed bottom bar. Classes: e.g. `.prompt-bar-inline` or `.context-pill-row`. Not duplicated on desktop.
+- **Header**: Library‑иконка слева (`.app-header-left-zone`), по центру — логотип `LitLense` + «POWERED BY DEEPSEEK» (`.app-header-logo`), справа — пустая зона (`.app-header-right`). Prompt‑bar в header на мобиле не показывается.
+- **Library**: Shown in a **left drawer** (overlay). Контейнеры: `.library-drawer-overlay` (затемнение) + `.library-drawer` (панель). Внутри рендерится тот же `LibraryPanelContent`, что и desktop sidebar; drawer открывается и закрывается через `isLibraryOpen`, закрытие по тапу на overlay и по выбору сохранённого контекста.
+- **Main**: Full width with horizontal padding (e.g. 16px). Card full width or `max-width: 100%`. Scroll rules (section 3) unchanged. Чатовый input‑bar (`.chat-input-bar`) фиксируется внизу viewport’а; у `.main` есть дополнительный `padding-bottom`, чтобы контент не прятался под ним.
+- **Context buttons**: Rendered в **input zone** и только на мобиле: `ContextPillRow` / `.context-pill-row` — Claude‑подобная строка пилюль (Historical, Cultural… + Chat). В Journey без открытого чата — над блоком `Continue journey`, в Chat — над чат‑инпутом. Не дублируется в header и отсутствует на десктопе.
 
 ### Mobile DOM (when drawer is used)
 
-- `.app-header`: `.app-header-left` (logo + burger), `.app-header-right` empty or minimal.
-- `.app-layout`: On mobile only `.right-container` is visible in flow; library is in an overlay (e.g. `.drawer-overlay` + `.library-drawer`, or the same `.library-panel` positioned fixed and toggled by class).
-- Context buttons: a dedicated block (e.g. `.context-pill-row`) only when viewport is mobile and in journey; placed in the input zone (bottom bar or next to chat input).
+- `.app-header`: `.app-header-left-zone` (Library icon button), `.app-header-logo` (logo + powered‑by), `.app-header-right` (empty on mobile).
+- `.app-layout`: On mobile only `.right-container` is visible in flow; library is in an overlay (`.library-drawer-overlay` + `.library-drawer`). `<aside class="library-panel">` остаётся источником данных и снова используется как sidebar на десктопе.
+- Context buttons: блок `.context-pill-row` рендерится только на мобиле, когда выбран pinned book и статус Journey/Chat; расположен в контенте карты рядом с чат‑инпутом, а не в header.
 
 ### Desktop layout (`min-width: 1024px`)
 
@@ -108,18 +110,18 @@ Do not remove `main--journey` or re-center the main content in journey mode; it 
 
 | Class | Purpose |
 |-------|---------|
-| `app-header`, `app-header-left`, `app-header-right` | Header; left 280px, right flex. |
-| `prompt-bar`, `prompt-button`, `prompt-button--active` | 7 buttons in header (always visible); active state for Chat. Context buttons and Chat are only interactive in journey mode. |
-| `library-panel`, `pinned-book`, `pinned-context` | Left sidebar; contexts are clickable (open chat) and show type + short topic label. |
+| `app-header`, `app-header-left-zone`, `app-header-logo`, `app-header-right` | Header zones (mobile: icon + centered logo; desktop: logo 280px + prompt‑bar справа). |
+| `prompt-bar`, `prompt-button`, `prompt-button--active` | 7 buttons in header (desktop); active state for Chat. Context buttons and Chat are only interactive in journey mode. |
+| `library-panel`, `pinned-book`, `pinned-context` | Left sidebar (desktop) и контент для Library drawer; contexts are clickable (open chat) and show type + short topic label. |
 | `main`, `main--journey` | Main scroll area; journey = top-aligned. |
 | `card`, `card-content` | White card; content area. |
 | `context-result`, `context-header`, `context-scrollable`, `context-footer` | Confirm section: label, scrollable text, fixed Confirm button. |
-| `chat-container`, `chat-messages`, `chat-input-bar` | Chat view: messages list, sticky input bar. |
+| `chat-container`, `chat-messages`, `chat-input-bar` | Chat view: messages list, input bar (fixed to bottom on mobile). |
 | `chat-message--user`, `chat-message--assistant`, `chat-message--streaming` | Chat message variants. |
 | `chat-save-button`, `chat-saved-label` | Save to context button and saved state on AI messages. |
-| `library-drawer`, `drawer-overlay` (mobile) | Left drawer for Library on mobile; overlay behind it. |
-| `context-pill-row` / `prompt-bar-inline` (mobile) | Row of context + Chat buttons next to chat input or in bottom bar; mobile only. |
+| `library-drawer`, `library-drawer-overlay` (mobile) | Left drawer for Library on mobile; overlay behind it. |
+| `context-pill-row` (mobile) | Row of context + Chat buttons рядом с чат‑инпутом; mobile only. |
 
 ---
 
-*Last updated: feat/mobile-first — mobile-first layout, Library drawer, context buttons by input (branch plan in docs/branches/feat-mobile-first.md).*
+*Last updated: feat/mobile-first — mobile-first layout, Library drawer (header icon + left overlay), fixed bottom chat input on mobile, context buttons by input (branch plan in docs/branches/feat-mobile-first.md).*
