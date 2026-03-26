@@ -2,6 +2,11 @@ import React, { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import "./App.css";
 import bookAltIcon from "./assets/book-alt.png";
+import {
+  clearStateFromStorage,
+  loadStateFromStorage,
+  saveStateToStorage,
+} from "./utils/storage";
 
 const CONTEXT_TITLES = {
   historical: "Historical Context",
@@ -13,6 +18,7 @@ const CONTEXT_TITLES = {
 };
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
+const UI_STORAGE_KEY = "litlense_ui_state_v1";
 
 function clampTitleWords(title, maxWords = 3) {
   if (!title || typeof title !== "string") return "";
@@ -40,6 +46,8 @@ function App() {
   const mainRef = useRef(null);
   const nextCtxId = useRef(1);
   const nextBookMsgId = useRef(1);
+  const didHydrateStorageRef = useRef(false);
+  const suppressStorageSaveRef = useRef(false);
 
   useEffect(() => {
     const el = mainRef.current;
@@ -75,6 +83,90 @@ function App() {
         : null);
     document.title = bookTitle ? `${bookTitle} — LitLense` : "LitLense";
   }, [pinnedBook?.title, lastRecognizedResult?.book?.recognized, lastRecognizedResult?.book?.title]);
+
+  useEffect(() => {
+    const loaded = loadStateFromStorage(UI_STORAGE_KEY, null);
+    didHydrateStorageRef.current = true;
+    suppressStorageSaveRef.current = true;
+
+    if (!loaded || typeof loaded !== "object" || loaded.version !== 1) {
+      suppressStorageSaveRef.current = false;
+      return;
+    }
+
+    const restoredPinnedBook = loaded.pinnedBook ?? null;
+    const restoredChatThreads = loaded.chatThreads ?? {};
+    const restoredStatus =
+      restoredPinnedBook && loaded.status === "journey" ? "journey" : "idle";
+    const restoredActiveChatThreadId =
+      typeof loaded.activeChatThreadId === "string"
+        ? loaded.activeChatThreadId
+        : null;
+
+    const isValidThread =
+      restoredActiveChatThreadId === "general"
+        ? Boolean(restoredChatThreads.general)
+        : Boolean(
+            restoredActiveChatThreadId &&
+              restoredChatThreads[restoredActiveChatThreadId]
+          );
+
+    setPinnedBook(restoredPinnedBook);
+    setChatThreads(restoredChatThreads);
+    setStatus(restoredStatus);
+    setActiveChatThreadId(
+      restoredStatus === "journey" && isValidThread
+        ? restoredActiveChatThreadId
+        : null
+    );
+
+    // Recompute counters to avoid ID collisions after hydration.
+    const contexts = Array.isArray(restoredPinnedBook?.contexts)
+      ? restoredPinnedBook.contexts
+      : [];
+    let maxCtxIndex = 0;
+    for (const ctx of contexts) {
+      const match = typeof ctx?.id === "string" ? /^ctx-(\d+)$/.exec(ctx.id) : null;
+      if (match) {
+        const idx = Number(match[1]);
+        if (Number.isFinite(idx)) maxCtxIndex = Math.max(maxCtxIndex, idx);
+      }
+    }
+    nextCtxId.current = maxCtxIndex + 1;
+
+    let maxBookMsgIndex = 0;
+    const recognitionMessages = Array.isArray(loaded.bookRecognitionMessages)
+      ? loaded.bookRecognitionMessages
+      : [];
+    for (const msg of recognitionMessages) {
+      const match =
+        typeof msg?.id === "string" ? /^bm-(\d+)$/.exec(msg.id) : null;
+      if (match) {
+        const idx = Number(match[1]);
+        if (Number.isFinite(idx)) maxBookMsgIndex = Math.max(maxBookMsgIndex, idx);
+      }
+    }
+    nextBookMsgId.current = maxBookMsgIndex + 1;
+
+    suppressStorageSaveRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    if (!didHydrateStorageRef.current || suppressStorageSaveRef.current) return;
+
+    if (!pinnedBook || status !== "journey") {
+      clearStateFromStorage(UI_STORAGE_KEY);
+      return;
+    }
+
+    saveStateToStorage(UI_STORAGE_KEY, {
+      version: 1,
+      pinnedBook,
+      chatThreads,
+      status,
+      activeChatThreadId,
+    });
+  }, [pinnedBook, chatThreads, status, activeChatThreadId]);
 
   const sendBookQuery = async () => {
     const text = input.trim();
@@ -144,14 +236,12 @@ function App() {
     }
   };
 
-  const handleBookInputKeyDown = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendBookQuery();
-    }
-  };
-
   const resetSession = () => {
+    suppressStorageSaveRef.current = true;
+    clearStateFromStorage(UI_STORAGE_KEY);
+    nextCtxId.current = 1;
+    nextBookMsgId.current = 1;
+
     setPinnedBook(null);
     setInput("");
     setStatus("idle");
@@ -163,6 +253,8 @@ function App() {
     setChatStreaming(false);
     setStreamingContent("");
     setIsLibraryOpen(false);
+
+    suppressStorageSaveRef.current = false;
   };
 
   const confirmAndContinue = () => {
