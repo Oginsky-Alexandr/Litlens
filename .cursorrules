@@ -27,4 +27,6 @@ Use conventional commit messages. Format: `<type>: <description>`
 
 - Always propose a short **plan first** for any code changes (files to edit, what will be changed).
 - **Do not modify code** (no Write/StrReplace/ApplyPatch/etc.) until the user explicitly approves the plan.
+- **Only an explicit "yes/approved" from the user counts as consent to edit code.**
+- **No response, silence, ambiguity, or implicit assumptions are NOT consent.**
 - After approval, implement **only** the agreed changes; if the scope needs to expand, present an updated plan and get approval again.
